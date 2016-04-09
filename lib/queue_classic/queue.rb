@@ -70,8 +70,8 @@ module QC
 
     def lock
       QC.log_yield(:measure => 'queue.lock') do
-        s = "SELECT * FROM lock_head($1, $2)"
-        if r = conn_adapter.execute(s, name, top_bound)
+        s = "SELECT * FROM lock_head($1)"
+        if r = conn_adapter.execute(s, name)
           {}.tap do |job|
             job[:id] = r["id"]
             job[:q_name] = r["q_name"]

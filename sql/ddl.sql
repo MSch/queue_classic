@@ -65,12 +65,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION lock_head(tname varchar)
+CREATE OR REPLACE FUNCTION lock_head(q_name varchar)
 RETURNS SETOF queue_classic_jobs AS $$
-BEGIN
-  RETURN QUERY EXECUTE 'SELECT * FROM lock_head($1,10)' USING tname;
-END;
-$$ LANGUAGE plpgsql;
+  UPDATE queue_classic_jobs
+  SET locked_at = now(), locked_by = pg_backend_pid()
+  WHERE id IN (
+    SELECT id FROM queue_classic_jobs
+    WHERE locked_at IS NULL AND q_name = $1 AND scheduled_at <= now()
+    LIMIT 1
+    FOR NO KEY UPDATE SKIP LOCKED
+  )
+  RETURNING *
+$$ LANGUAGE sql;
 
 -- queue_classic_notify function and trigger
 create function queue_classic_notify() returns trigger as $$ begin
